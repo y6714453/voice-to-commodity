@@ -14,9 +14,10 @@ import shutil
 USERNAME = "0733181201"
 PASSWORD = "6714453"
 TOKEN = f"{USERNAME}:{PASSWORD}"
+
 FFMPEG_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
-DOWNLOAD_PATH = "1/0/4"  # שלוחת ההקלטות: 4 בתוך 0 בתוך 1
-UPLOAD_PATH = "ivr2:/1/0/44/001.wav"  # שלוחת התוצאה: 44 בתוך 0 בתוך 1
+DOWNLOAD_PATH = "1/0/4"
+UPLOAD_PATH = "ivr2:/1/0/44/001.wav"
 
 async def main_loop():
     stock_dict = load_stock_list("hebrew_stocks.csv")
@@ -195,7 +196,12 @@ def format_text(stock_info, data):
     year = f"מתחילת השנה נרשמה {'עלייה' if data['year'] > 0 else 'ירידה'} של {abs(data['year'])} אחוז."
     high = f"המחיר הנוכחי רחוק מהשיא ב־{abs(data['from_high'])} אחוז."
 
-    if "מניה" in stock_type:
+    if "סחורה" in stock_type:
+        return (
+            f"נמצאה סחורה בשם {name}. המחיר כעת הוא {data['current']} {currency}. "
+            f"{day} {week} {mo3} {year} {high}"
+        )
+    elif "מניה" in stock_type:
         return (
             f"נמצאה מניה בשם {name}. המניה נסחרת בשווי של {data['current']} {currency}. "
             f"{day} {week} {mo3} {year} {high}"
@@ -203,11 +209,6 @@ def format_text(stock_info, data):
     elif "מדד" in stock_type:
         return (
             f"נמצא מדד בשם {name}. המדד עומד כעת על {data['current']} נקודות. "
-            f"{day} {week} {mo3} {year} {high}"
-        )
-    elif "סחורה" in stock_type:
-        return (
-            f"נמצאה סחורה בשם {name}. הסחורה נסחרת כעת בשווי של {data['current']} דולר. "
             f"{day} {week} {mo3} {year} {high}"
         )
     elif "קריפטו" in stock_type or "מטבע" in stock_type:
@@ -227,6 +228,18 @@ def convert_mp3_to_wav(mp3_file, wav_file):
         "ffmpeg", "-loglevel", "error", "-y",
         "-i", mp3_file, "-ar", "8000", "-ac", "1", "-acodec", "pcm_s16le", wav_file
     ])
+
+def upload_to_yemot(wav_file):
+    url = "https://www.call2all.co.il/ym/api/UploadFile"
+    m = MultipartEncoder(
+        fields={
+            "token": TOKEN,
+            "path": UPLOAD_PATH,
+            "upload": (wav_file, open(wav_file, 'rb'), 'audio/wav')
+        }
+    )
+    response = requests.post(url, data=m, headers={'Content-Type': m.content_type})
+    print(f"⬆️ קובץ עלה לשלוחה {UPLOAD_PATH}")
 
 if __name__ == "__main__":
     asyncio.run(main_loop())
